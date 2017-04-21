@@ -8,7 +8,7 @@ function sendBtn() {
         socket.send(text);
         $('#text').val("");
     }
-    $('#send').on('click',function send(){
+    $('#send').on('click',function(){
         send();
     });
     $('#text').keypress(function(e) {
