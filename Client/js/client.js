@@ -1,26 +1,41 @@
+var socket;
 function message(msg){
 	$('#chatLog').append(msg+'</p>');
 }
+function sendBtn() {
+    $('#send').on('click',function send(){
+        var text = $('#text').val();
+        socket.send(text);
+        $('#text').val("");
+    });
+}
+function initAfterConn() {
+    sendBtn();
+}
 function connect(){
     try{
-
-	var socket;
 	var host = "ws://localhost:8081/";
-    var socket = new WebSocket(host);
+	// var host = "ws://192.168.43.245:8081/";//192.168.43.39
+    socket = new WebSocket(host);
 
         message('<p class="event">Socket Status: '+socket.readyState);
 
         socket.onopen = function(){
-       		 message('<p class="event">Socket Status: '+socket.readyState+' (open)');
+            console.log(socket.readyState+' (open)');
+            message('<p class="event">Socket Status: '+socket.readyState+' (open)');
         }
 
         socket.onmessage = function(msg){
-       		 message('<p class="message">Received: '+msg.data);
+            console.log(msg.data);
+            message('<p class="message">Received: '+msg.data);
         }
 
         socket.onclose = function(){
-       		 message('<p class="event">Socket Status: '+socket.readyState+' (Closed)');
+            console.log(socket.readyState+' (Closed)');
+            message('<p class="event">Socket Status: '+socket.readyState+' (Closed)');
         }
+
+        initAfterConn();
 
     } catch(exception){
    		 message('<p>Error'+exception);
