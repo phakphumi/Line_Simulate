@@ -1,6 +1,6 @@
 var socket;
 var thisUser;
-function message(msg){
+function messageShow(msg){
     var chatLog = $('#chatLog');
     var bottom = false;
     if((chatLog[0].scrollHeight-chatLog[0].clientHeight) - chatLog.scrollTop() < 30)
@@ -44,31 +44,27 @@ function setupSocketInput() {
             sendInput($(this));
     });
 }
-function initAfterConn() {
-    setupSocketInput();
-}
-function setUserName() {
+function login_to_sever() {
     if(thisUser == null){
-        iniUser();
+        loginDialog();
         return;
     }
     sendSocket(thisUser,'user',{newLogin:false});
 }
-function connect(){
+function connect(host){
     try{
     	// var host = "ws://localhost:8081/";
-    	var host = "ws://192.168.137.1:8081/";//192.168.43.39//192.168.137.1
+    	// var host = "ws://192.168.137.1:8081/";//192.168.43.39//192.168.137.1
+    	var host = (host == null) ? "ws://192.168.43.39:8081/" : host;//192.168.43.39//192.168.137.1
+        console.log(host);
         socket = new WebSocket(host);
-
-
-        // message('<p class="event">Socket Status: '+socket.readyState);
 
         socket.onopen = function(){
             console.log(socket.readyState+' (open)');
             socketInput(true);
             $('.connecting').removeClass('connecting');
             $('#server').html('<p class="event"><span class="word-received">Socket Status:</span> Connected</p>');
-            setUserName();
+            login_to_sever();
         }
 
         socket.onmessage = function(res){
@@ -80,7 +76,7 @@ function connect(){
                 case 'msg':
                     if(user == thisUser)
                         user = 'You ('+thisUser+')';
-                    message('<p class="message"><span class="word-received">'+user+' :</span> '+ msg );
+                    messageShow('<p class="message"><span class="word-received">'+user+' :</span> '+ msg );
                     break;
                 case 'log':
                     console.log(msg);
@@ -100,19 +96,27 @@ function connect(){
                     break;
             }
         }
-
+        function get_newSocketIp() {
+            $.get('http://localhost:3030/online',function(res) {
+                res = JSON.parse(res);
+                console.log(res);
+                var ip = res.ip;
+                var port = res.port;
+                connect('ws://'+ip+':'+port+'/');
+            });
+        }
         socket.onclose = function(){
             console.log(socket.readyState+' (Closed)');
             socketInput(false);
             if($('.connecting').length==0)
                 $('#server').html('<p class="event connecting"><span class="word-received">Socket Status:</span> Connecting....</p>');
-            setTimeout(connect(),1000);
+            setTimeout(get_newSocketIp(),1000);
         }
 
-        initAfterConn();
 
     } catch(exception){
-   		 message('<p>Error'+exception);
+        console.log(exception);
+        messageShow('<p>Error'+exception);
     }
 }
 function testGet() {
@@ -120,24 +124,21 @@ function testGet() {
         console.log( data );
     });
 }
-function iniUser() {
-    var newE = $('#input-template').find('.input-group').clone();
-    newE.find('.input-socket').attr('data-type','user');
+function loginDialog() {
+    var input_template = $('#input-template').find('.input-group').clone();
+    input_template.find('.input-socket').attr('data-type','user');
+    var dialog = $('<div class="container-fluid"></div>').html('<div class="row"><div class="col-sm-6 item"></div></div>');
+    dialog.find('.item').html(input_template);
     BootstrapDialog.show({
         title: 'Enter your name',
-        closeByKeyboard: true,
-        message: function(){
-            var dialog = $('<div class="row"></div>').html('<div class="col-sm-6 item"></div>');
-            dialog.find('.item').html(newE);
-            return dialog;
-        },
+        closable: false,
+        size: BootstrapDialog.SMALL,
+        message: dialog,
         onshown : function(dialog) {
             setupSocketInput();
         }
     });
 }
 $(function() {
-    // socketInput(false);
-    // testGet();
     connect();
 });
