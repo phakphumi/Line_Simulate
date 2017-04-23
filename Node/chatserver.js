@@ -13,6 +13,88 @@ var chat_server = function(webSocket_opt,allServer) {
             chatsList : ['obj'],
         },
     }
+    function initWS(address) {
+        if(address in onlineServer)
+            return;
+
+        var ws = new WebSocket(address);
+        ws.on('open',function() {
+            console.log('connected to',address);
+            onlineServer[address] = ws;
+            var obj = {type:'server',action:'connect',address:'ws://'+webSocket_opt.ip+':'+webSocket_opt.port};
+            ws.send(JSON.stringify(obj));
+        });
+        ws.on('error',function() {
+            console.log('error on',address);
+        });
+        ws.on('close',function(){
+            console.log('closed on',address);
+            delete onlineServer[address];
+        });
+        return ws;
+    }
+    function connect_allServer() {
+        // var onlineServer = {};
+        for(var obj of allServer){
+            var ip = obj.ip;
+            var port = obj.port;
+            if(port == webSocket_opt.port && ip == webSocket_opt.ip)
+                continue;
+            var str = 'ws://'+ip+':'+port;
+            var ws = initWS(str);
+        }
+        // return onlineServer;
+    }
+    var onlineServer = {};
+    connect_allServer();
+    function sendToServer(path) {
+        var val = eval(path) ;
+        var out = {msg:{path:path,val:val},type:'server',action:'update'};
+        out = JSON.stringify(out);
+        console.log(out);
+        for(var address in onlineServer){
+            var ws = onlineServer[address];
+            if(ws.readyState == WebSocket.OPEN){
+                console.log('ws was sent');
+                ws.send(out);
+            }
+        }
+    }
+    function setVal(obj,path,val) {
+        path = path.replace(/\[/g,'.').replace(/\]/g,'');
+        console.log(path);
+        path = path.split('.');
+        path.splice(0,1);
+        for (i = 0; i < path.length - 1; i++) {
+            if( obj[path[i]] == null){
+                if(typeof(path[i]) == 'number')
+                    obj[path[i]] = [];
+                else
+                    obj[path[i]] = {};
+            }
+            obj = obj[path[i]];
+        }
+        obj[path[i]] = val;
+
+        console.log(path);
+        if(path[path.length-2].indexOf('unreads')>-1){
+            var user = path[2];
+            console.log('unreads from another server to',user);
+            wss.clients.forEach(function(ws) {
+                if(ws.user == user){
+                    console.log('found that person :D');
+                    sendUnread(ws);
+                }
+            });
+        }
+    }
+    function updateRoomList(path,val) {
+        if(arguments.length == 1){
+            sendToServer(path);
+        }else{
+            setVal(roomList,path,val);
+        }
+    }
     function pushArray(obj,target,data) {
         var location = 0;
         if( obj[target] == null)
@@ -22,10 +104,14 @@ var chat_server = function(webSocket_opt,allServer) {
     }
     function sendUnread(ws) {
         var user = ws.user;
-        if((unreads = roomList[ws.room].userList[user].unreads )== null)
+        var room = ws.room;
+        if((unreads = roomList[room].userList[user].unreads )== null){
+            console.log(unreads);
             return;
+        }
         roomList[ws.room].userList[user].unreads = [];
-        var chatsList = roomList[ws.room].chatsList;
+        updateRoomList('roomList.'+room+'.userList.'+user+'.unreads');
+        var chatsList = roomList[room].chatsList;
         console.log(user,' has unreads : number ',unreads);
         for (var i = 0; i < unreads.length; i++) {
             var data = chatsList[unreads[i]];
@@ -56,14 +142,20 @@ var chat_server = function(webSocket_opt,allServer) {
                 for(var user in userList) {
                     if(onlineList.indexOf(user)>=0)
                         continue;
-                    pushArray(userList[user],'unreads',chat_number);
+                    var unreadNo = pushArray(userList[user],'unreads',chat_number);
+                    updateRoomList('roomList.'+room+'.userList.'+user+'.unreads['+unreadNo+']');
                 }
             }
 
             var chat_number = pushArray(roomList[room],'chatsList',data);
+            updateRoomList('roomList.'+room+'.chatsList['+chat_number+']');
             var onlineList = online();
             offline(onlineList,chat_number);
         };
+    }
+    function createUser(user,room='room') {
+        roomList[room].userList[user] = {};
+        updateRoomList('roomList.'+room+'.userList.'+user);
     }
     function setup_prototype(WebSocket) {
         WebSocket.prototype.user = 'Guess';
@@ -95,23 +187,45 @@ var chat_server = function(webSocket_opt,allServer) {
                     case 'user':
                         var user = ws.user = msg;
                         var room = ws.room = data.room == null ? 'room' : data.room;
-                        if(roomList[ws.room].userList[user] == null)
-                            roomList[ws.room].userList[user] = {};
-                        console.log('-',user,'logged in to room ',ws.room);
+                        if(roomList[room].userList[user] == null)
+                            createUser(user,room);
+                        console.log('-',user,'logged in to room ',room);
                         ws.sendSocket({msg:msg,user:'You are ',type:'success'});
                         if(data.opt.newLogin == null || (data.opt.newLogin != null && data.opt.newLogin)){
-                            wss.broadcast({msg:ws.user+' joined'});
+                            wss.broadcast({msg:user+' joined'});
                         }
                         sendUnread(ws);
                         break;
                     case 'debug':
-                        console.log(groupList);
-                        ws.sendSocket(groupList);
+                        // console.log(roomList);
+                        // ws.sendSocket({type:'debug',msg:{'onlineServer':onlineServer}});
+                        ws.sendSocket({type:'debug',msg:{'roomList':roomList}});
+                        break;
+                    case 'server':
+                        switch (data.action) {
+                            case 'connect':
+                                console.log('Server, show up at :',data.address);
+                                ws.user = data.address;
+                                initWS(data.address);
+                                // ws.sendSocket({type:'server',action:'patch',data:roomList});
+                                break;
+                            case 'update':
+                                console.log('server update : ', msg.path,'val :',msg.val);
+                                updateRoomList(msg.path,msg.val);
+                                break;
+                            case 'patch':
+                                console.log('server patched : ', msg.data);
+                                roomList = msg.data;
+                                break;
+                            default:
+
+                        }
+                        break;
                     default:
                 }
             });
             ws.on('close',function close() {
-                if(ws.user == 'guess')
+                if(ws.user == 'Guess')
                     return;
                 console.log(ws.user,'logged out');
                 wss.broadcast({msg:ws.user+' logged out'});

@@ -15,9 +15,7 @@ function socketInput(Status) {
     else
         $('.input-socket,.input-btn').prop('disabled',true);
 }
-function sendSocket(msg,type,opt) {
-    var type = arguments.length <= 1 ? 'msg' : type;
-    var opt = arguments.length <= 2 ? '' : opt;
+function sendSocket(msg,type='msg',opt='') {
     var obj = {
         type : type,
         msg : msg,
@@ -51,6 +49,9 @@ function login_to_sever() {
     }
     sendSocket(thisUser,'user',{newLogin:false});
 }
+function debug(msg='') {
+    socket.send(JSON.stringify({type:'debug',msg:msg}));
+}
 function connect(host){
     try{
     	// var host = "ws://localhost:8081/";
@@ -79,6 +80,9 @@ function connect(host){
                     messageShow('<p class="message"><span class="word-received">'+user+' :</span> '+ msg );
                     break;
                 case 'log':
+                    console.log(msg);
+                    break;
+                case 'debug':
                     console.log(msg);
                     break;
                 case 'success':
