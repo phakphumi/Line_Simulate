@@ -14,7 +14,7 @@
         </div>
         <div class="container">
             <div class="jumbotron">
-                <h1>Hello, world!</h1>
+                <h1>Hello, <span class="name">world</span>!</h1>
                 <div class="" id="server">
 
                 </div>
@@ -23,12 +23,29 @@
 
                 </div>
                 <div class="row">
-                    <div class="col-xs-12 col-sm-offset-0 col-sm-6 col-md-5" id="input-template">
+                    <div class="col-xs-12" id="input-template">
                         <div class="input-group">
-                          <input type="text" class="form-control input-socket" placeholder="Type...." data-type="msg">
-                          <span class="input-group-btn">
-                            <button class="btn btn-primary input-btn" type="button">Send</button>
-                          </span>
+                            <span class="input-group-addon primary">
+                                <span class="glyphicon glyphicon-comment" aria-hidden="true"></span>
+                            </span>
+                            <input type="text" class="form-control input-socket" placeholder="Type...." data-type="msg">
+                            <div class="input-group-btn">
+                                <button type="button" class="btn btn-default dropdown-toggle room-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="room">Room</span> <span class="caret"></span></button>
+                                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="room">
+                                    <div class="container-fluid">
+                                        <div class="input-group">
+                                            <span class="input-group-addon primary">
+                                                <span class="glyphicon glyphicon-home" aria-hidden="true"></span>
+                                            </span>
+                                            <input class="form-control input-socket" type="text" placeholder="Room..." value="room" data-type="room">
+                                            <div class="input-group-btn">
+                                                <button class="btn btn-primary input-btn" type="button"><span class="glyphicon glyphicon-send primary" aria-hidden="true"></span></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary input-btn" type="button">Send</button>
+                            </div>
                         </div>
                     </div>
                 </div>

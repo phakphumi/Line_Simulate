@@ -1,5 +1,5 @@
 var socket;
-var thisUser;
+var thisUser= {};
 function messageShow(msg){
     var chatLog = $('#chatLog');
     var bottom = false;
@@ -15,26 +15,36 @@ function socketInput(Status) {
     else
         $('.input-socket,.input-btn').prop('disabled',true);
 }
-function sendSocket(msg,type='msg',opt='') {
+function sendSocket(msg,type='msg',opt={}) {
     var obj = {
         type : type,
         msg : msg,
-        opt: opt
+        room : thisUser.room,
     };
+    Object.assign(obj,opt);
     socket.send(JSON.stringify(obj));
 }
 function setupSocketInput() {
     var input = $('.input-socket');
     var input_group = input.parents('.input-group');
     var btn = input_group.find('.input-btn');
-    var sendInput = function(input) {
+    function sendInput(input) {
+        console.log(input);
         var text = input.val();
         var type = input.attr('data-type');
         input.val("");
+        if(type == 'room'){
+            input.val(text);
+            thisUser.room = text;
+            $('.room-btn').dropdown('toggle');
+            $('.room').html(text).css('textTransform','capitalize');
+            $('#chatLog').html('');
+        }
         sendSocket(text,type);
     }
     btn.off('click.socket').on('click.socket',function(e){
-        var input = $(this).parents('.input-group').find('.input-socket');
+        var input = $(this).closest('.input-group').find('.input-socket');
+        console.log(input);
         sendInput(input);
     });
     input.off('keypress.socket').on('keypress.socket',function(e) {
@@ -43,11 +53,11 @@ function setupSocketInput() {
     });
 }
 function login_to_sever() {
-    if(thisUser == null){
+    if(thisUser.user == null){
         loginDialog();
         return;
     }
-    sendSocket(thisUser,'user',{newLogin:false});
+    sendSocket(thisUser.user,'user',{newLogin:false});
 }
 function debug(msg='') {
     socket.send(JSON.stringify({type:'debug',msg:msg}));
@@ -75,8 +85,8 @@ function connect(host){
             var msg = res.msg;
             switch (res.type) {
                 case 'msg':
-                    if(user == thisUser)
-                        user = 'You ('+thisUser+')';
+                    if(user == thisUser.user)
+                        user = 'You ('+thisUser.user+')';
                     messageShow('<p class="message"><span class="word-received">'+user+' :</span> '+ msg );
                     break;
                 case 'log':
@@ -89,12 +99,13 @@ function connect(host){
                     $.each(BootstrapDialog.dialogs, function(id, dialog){
                         dialog.close();
                     });
-                    if(thisUser == null){
-                        thisUser = msg;
+                    if(thisUser.user == null){
+                        thisUser.user = msg;
                         BootstrapDialog.show({
-                            message:    '<h1> Hello, '+msg+' :D</h1>',
+                            message:    '<h1> Hello, '+thisUser.user+' :D</h1>',
                         });
                     }
+                    $('.name').html(thisUser.user);
 
                 default:
                     break;
@@ -129,9 +140,9 @@ function testGet() {
     });
 }
 function loginDialog() {
-    var input_template = $('#input-template').find('.input-group').clone();
-    input_template.find('.input-socket').attr('data-type','user');
-    var dialog = $('<div class="container-fluid"></div>').html('<div class="row"><div class="col-sm-6 item"></div></div>');
+    var input_template = $('#input-template').children('.input-group').clone();
+    input_template.find('.input-socket[data-type="msg"]').attr('data-type','user');
+    var dialog = $('<div class="container-fluid"></div>').html('<div class="row"><div class="col-sm-12 item"></div></div>');
     dialog.find('.item').html(input_template);
     BootstrapDialog.show({
         title: 'Enter your name',

@@ -18,11 +18,15 @@ var chat_server = function(webSocket_opt,allServer) {
             return;
 
         var ws = new WebSocket(address);
+        ws.server = true;
         ws.on('open',function() {
             console.log('connected to',address);
             onlineServer[address] = ws;
             var obj = {type:'server',action:'connect',address:'ws://'+webSocket_opt.ip+':'+webSocket_opt.port};
             ws.send(JSON.stringify(obj));
+        });
+        ws.on('message',function(data) {
+            initOnMessage(ws,data);
         });
         ws.on('error',function() {
             console.log('error on',address);
@@ -34,7 +38,6 @@ var chat_server = function(webSocket_opt,allServer) {
         return ws;
     }
     function connect_allServer() {
-        // var onlineServer = {};
         for(var obj of allServer){
             var ip = obj.ip;
             var port = obj.port;
@@ -43,7 +46,6 @@ var chat_server = function(webSocket_opt,allServer) {
             var str = 'ws://'+ip+':'+port;
             var ws = initWS(str);
         }
-        // return onlineServer;
     }
     var onlineServer = {};
     connect_allServer();
@@ -122,9 +124,9 @@ var chat_server = function(webSocket_opt,allServer) {
     }
     function setup_broadcast(wss) {
         wss.broadcast = function broadcast(data,ws) {
-            var room = 'room';
-            if(ws != null) room = ws.room;
-
+            var room =  'room';
+            if(ws != null) room = ws.room ;
+            console.log('bc ',data,'to ',room);
             function online() {
                 var onlineList = [];
                 wss.clients.forEach(function each(client) {
@@ -153,10 +155,10 @@ var chat_server = function(webSocket_opt,allServer) {
             offline(onlineList,chat_number);
         };
     }
-    function createUser(user,room='room') {
-        roomList[room].userList[user] = {};
-        updateRoomList('roomList.'+room+'.userList.'+user);
-    }
+    // function createUser(user,room='room') {
+    //     roomList[room].userList[user] = {};
+    //     updateRoomList('roomList.'+room+'.userList.'+user);
+    // }
     function setup_prototype(WebSocket) {
         WebSocket.prototype.user = 'Guess';
         WebSocket.prototype.sendSocket = function(res) {
@@ -170,65 +172,85 @@ var chat_server = function(webSocket_opt,allServer) {
             this.send(JSON.stringify(obj));
         }
     }
+    function initOnMessage(ws,data) {
+        data = JSON.parse(data);
+        console.log(ws.user,' : ',data);
+        var msg = data.msg;
+        switch (data.type) {
+            case 'msg':
+                var user = ws.user;
+                wss.broadcast({msg:msg,user:user},ws);
+                break;
+            case 'user':
+                var user = ws.user = msg;
+                var room = ws.room = data.room == null ? 'room' : data.room;
+                setVal(roomList,'roomList.'+room+'.userList.'+user,{});
+                // if(roomList[room].userList[user] == null)
+                //     createUser(user,room);
+                ws.sendSocket({msg:msg,user:'You are ',type:'success'});
+                sendUnread(ws);
+                if(data.newLogin == null || (data.newLogin != null && data.newLogin)){
+                    wss.broadcast({msg:user+' joined main room'},ws);
+                }
+                break;
+            case 'room':
+                console.log(ws.user,'now in',data.room);
+                var user = ws.user;
+                var room = ws.room = data.room;
+                if(user=='Guess')
+                    return;
+                setVal(roomList,'roomList.'+room+'.userList.'+user,{});
+                sendUnread(ws);
+                wss.broadcast({msg:user+" joined room : '"+room+"'"},ws);
+                break;
+            case 'debug':
+                // console.log(roomList);
+                // ws.sendSocket({type:'debug',msg:{'onlineServer':onlineServer}});
+                ws.sendSocket({type:'debug',msg:{'roomList':roomList}});
+                break;
+            case 'server':
+                switch (data.action) {
+                    case 'connect':
+                        console.log('Server, show up at :',data.address);
+                        ws.address = data.address;
+                        ws.server = true;
+                        // initWS(data.address);
+                        onlineServer[data.address] = ws;
+                        ws.sendSocket({type:'server',action:'patch',list:roomList});
+                        break;
+                    case 'update':
+                        console.log('server update : ', msg.path,'val :',msg.val);
+                        updateRoomList(msg.path,msg.val);
+                        break;
+                    case 'patch':
+                        console.log('server patched : ', data.list);
+                        roomList = data.list;
+                        break;
+                    default:
+
+                }
+                break;
+            default:
+        }
+    }
     function start_server(webSocket_opt) {
         setup_prototype(WebSocket);
         setup_broadcast(wss = new WebSocket.Server(webSocket_opt));
         wss.on('connection', function connection(ws) {
             ws.sendSocket({msg:'Greeting :D',type:'log'});
             ws.on('message', function incoming(data) {
-                data = JSON.parse(data);
-                console.log(ws.user,' : ',data);
-                var msg = data.msg;
-                switch (data.type) {
-                    case 'msg':
-                        var user = ws.user;
-                        wss.broadcast({msg:msg,user:user},ws);
-                        break;
-                    case 'user':
-                        var user = ws.user = msg;
-                        var room = ws.room = data.room == null ? 'room' : data.room;
-                        if(roomList[room].userList[user] == null)
-                            createUser(user,room);
-                        console.log('-',user,'logged in to room ',room);
-                        ws.sendSocket({msg:msg,user:'You are ',type:'success'});
-                        if(data.opt.newLogin == null || (data.opt.newLogin != null && data.opt.newLogin)){
-                            wss.broadcast({msg:user+' joined'});
-                        }
-                        sendUnread(ws);
-                        break;
-                    case 'debug':
-                        // console.log(roomList);
-                        // ws.sendSocket({type:'debug',msg:{'onlineServer':onlineServer}});
-                        ws.sendSocket({type:'debug',msg:{'roomList':roomList}});
-                        break;
-                    case 'server':
-                        switch (data.action) {
-                            case 'connect':
-                                console.log('Server, show up at :',data.address);
-                                ws.user = data.address;
-                                initWS(data.address);
-                                // ws.sendSocket({type:'server',action:'patch',data:roomList});
-                                break;
-                            case 'update':
-                                console.log('server update : ', msg.path,'val :',msg.val);
-                                updateRoomList(msg.path,msg.val);
-                                break;
-                            case 'patch':
-                                console.log('server patched : ', msg.data);
-                                roomList = msg.data;
-                                break;
-                            default:
-
-                        }
-                        break;
-                    default:
-                }
+                initOnMessage(ws,data);
             });
             ws.on('close',function close() {
-                if(ws.user == 'Guess')
+                if(ws.server){
+                    console.log('Server ',ws.address,'was closed');
+                    delete onlineServer[ws.address];
+                }else if(ws.user == 'Guess'){
                     return;
-                console.log(ws.user,'logged out');
-                wss.broadcast({msg:ws.user+' logged out'});
+                }else{
+                    console.log(ws.user,'logged out');
+                    wss.broadcast({msg:ws.user+' logged out'});
+                }
             });
         });
         console.log('-------\n Server started','running at port : ',webSocket_opt.port,'\n-------');
