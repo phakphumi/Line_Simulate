@@ -155,10 +155,6 @@ var chat_server = function(webSocket_opt,allServer) {
             offline(onlineList,chat_number);
         };
     }
-    // function createUser(user,room='room') {
-    //     roomList[room].userList[user] = {};
-    //     updateRoomList('roomList.'+room+'.userList.'+user);
-    // }
     function setup_prototype(WebSocket) {
         WebSocket.prototype.user = 'Guess';
         WebSocket.prototype.sendSocket = function(res) {

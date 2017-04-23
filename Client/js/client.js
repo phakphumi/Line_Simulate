@@ -102,7 +102,7 @@ function connect(host){
                     if(thisUser.user == null){
                         thisUser.user = msg;
                         BootstrapDialog.show({
-                            message:    '<h1> Hello, '+thisUser.user+' :D</h1>',
+                            message:    '<div class="container-fluid greeting"><h1> Hello, '+thisUser.user+' :D</h1><p>Welcome to chatroom</p></div>',
                         });
                     }
                     $('.name').html(thisUser.user);
@@ -141,8 +141,8 @@ function testGet() {
 }
 function loginDialog() {
     var input_template = $('#input-template').children('.input-group').clone();
-    input_template.find('.input-socket[data-type="msg"]').attr('data-type','user');
-    var dialog = $('<div class="container-fluid"></div>').html('<div class="row"><div class="col-sm-12 item"></div></div>');
+    input_template.find('.input-socket[data-type="msg"]').attr('data-type','user').attr('placeholder','Your name...');
+    var dialog = $('<div class="container-fluid login-group"></div>').html('<div class="row"><div class="col-sm-12 item"></div></div>');
     dialog.find('.item').html(input_template);
     BootstrapDialog.show({
         title: 'Enter your name',

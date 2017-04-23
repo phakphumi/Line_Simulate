@@ -10,6 +10,16 @@
 h1 .name{
     color:#714bb5;
 }
+.greeting{
+    text-align: center;
+    padding: 60px 0px;
+}
+.greeting p{
+    font-size: 21px;
+}
+.login-group{
+    padding: 20px 20px;
+}
 .input-group-btn:last-child>.dropdown-toggle:first-child{
     border-radius: 0px;
 }
