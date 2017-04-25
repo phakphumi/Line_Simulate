@@ -180,8 +180,11 @@ var chat_server = function(webSocket_opt,allServer) {
             case 'user':
                 var user = ws.user = msg;
                 var room = ws.room = data.room == null ? 'room' : data.room;
-                setVal(roomList,'roomList.'+room+'.userList.'+user,{});
-                // if(roomList[room].userList[user] == null)
+                if(roomList[room].userList[user] == null) {
+                
+                    setVal(roomList,'roomList.'+room+'.userList.'+user,{});
+                
+                }
                 //     createUser(user,room);
                 ws.sendSocket({msg:msg,user:'You are ',type:'success'});
                 sendUnread(ws);
