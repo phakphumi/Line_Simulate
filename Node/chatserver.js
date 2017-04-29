@@ -79,7 +79,7 @@ var chat_server = function(webSocket_opt,allServer) {
         obj[path[i]] = val;
 
         console.log(path);
-        if(path[path.length-2].indexOf('unreads')>-1){
+        if(path.length-2 >=0 && path[path.length-2].indexOf('unreads')>-1){
             var user = path[2];
             console.log('unreads from another server to',user);
             wss.clients.forEach(function(ws) {
@@ -180,8 +180,13 @@ var chat_server = function(webSocket_opt,allServer) {
             case 'user':
                 var user = ws.user = msg;
                 var room = ws.room = data.room == null ? 'room' : data.room;
-                setVal(roomList,'roomList.'+room+'.userList.'+user,{});
-                // if(roomList[room].userList[user] == null)
+
+                if(roomList[room] == null)
+                    setVal(roomList,'roomList.'+room,{userList:{},chatsList:[]});
+                if(roomList[room] == null)
+                    setVal(roomList,'roomList.'+room,{userList:{}});
+                if(roomList[room].userList[user] == null)
+                    setVal(roomList,'roomList.'+room+'.userList.'+user,{});
                 //     createUser(user,room);
                 ws.sendSocket({msg:msg,user:'You are ',type:'success'});
                 sendUnread(ws);
@@ -195,7 +200,10 @@ var chat_server = function(webSocket_opt,allServer) {
                 var room = ws.room = data.room;
                 if(user=='Guess')
                     return;
-                setVal(roomList,'roomList.'+room+'.userList.'+user,{});
+                if(roomList[room] == null)
+                    setVal(roomList,'roomList.'+room,{userList:{},chatsList:[]});
+                if(roomList[room].userList[user] == null)
+                    setVal(roomList,'roomList.'+room+'.userList.'+user,{});
                 sendUnread(ws);
                 wss.broadcast({msg:user+" joined room : '"+room+"'"},ws);
                 break;

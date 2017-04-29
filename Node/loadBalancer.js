@@ -2,7 +2,7 @@ var WebSocket = require('ws');
 var express = require('express');
 var app = express();
 
-var ip = ["127.0.0.1", "127.0.0.1"];
+var ip = ["172.20.10.2", "172.20.10.2"];
 var port = ["8081", "8082"];
 
 var chosenIP = ip[0];

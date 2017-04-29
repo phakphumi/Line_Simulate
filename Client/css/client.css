@@ -5,7 +5,12 @@
     color:#4caf50;
 }
 #chatLog{
-    height: 340px;
+    height: 280px;
+}
+@media screen and (max-width: 700px) {
+    #chatLog{
+        height: 240px;
+    }
 }
 h1 .name{
     color:#714bb5;

@@ -66,7 +66,7 @@ function connect(host){
     try{
     	// var host = "ws://localhost:8081/";
     	// var host = "ws://192.168.137.1:8081/";//192.168.43.39//192.168.137.1
-    	var host = (host == null) ? "ws://192.168.43.39:8081/" : host;//192.168.43.39//192.168.137.1
+    	var host = (host == null) ? "ws://172.20.10.2:8081/" : host;//192.168.43.39//192.168.137.1
         console.log(host);
         socket = new WebSocket(host);
 
@@ -112,7 +112,7 @@ function connect(host){
             }
         }
         function get_newSocketIp() {
-            $.get('http://localhost:3030/online',function(res) {
+            $.get('http://172.20.10.2:3030/online',function(res) {
                 res = JSON.parse(res);
                 console.log(res);
                 var ip = res.ip;
@@ -133,11 +133,6 @@ function connect(host){
         console.log(exception);
         messageShow('<p>Error'+exception);
     }
-}
-function testGet() {
-    $.get( "http://localhost:8081/test", function( data ) {
-        console.log( data );
-    });
 }
 function loginDialog() {
     var input_template = $('#input-template').children('.input-group').clone();
